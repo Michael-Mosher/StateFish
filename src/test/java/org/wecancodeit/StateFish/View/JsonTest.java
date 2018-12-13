@@ -13,9 +13,12 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.util.NestedServletException;
+import org.wecancodeit.StateFish.Model.City;
 import org.wecancodeit.StateFish.Model.Fish;
 import org.wecancodeit.StateFish.Model.State;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -93,6 +96,22 @@ public class JsonTest {
     );
   }
   
+  public void assertGetSTateDcQueryReturnsStateNotFoundException() throws Exception
+  {
+    // Assemble
+    String url = "http://localhost:8080";
+    String target = "/states/";
+    String stateArg = "dc";
+    String jsonMimeType = "application/json";
+    // Action
+    // Assert
+    this.fakeMvc.perform(get(target+stateArg)).andDo(print()).andExpect(status().isOk()
+        ).andExpect(content().contentTypeCompatibleWith(jsonMimeType)
+        ).andExpect(content().string(containsString("name:,abbreviation"))
+        ).andExpect(content().string(containsString("citiesUrl:,fish"))
+    );
+  }
+
   @Test
   public void assertPostIsOkAndEmptyWithValidBody() throws Exception
   {
@@ -100,11 +119,66 @@ public class JsonTest {
     State fakeState = new State("Dischord", "DC", "Arrgh", new Fish("Slippery", "Icthocalamatus", "https://no-such.org/"));
     ObjectMapper mapper = new ObjectMapper();
     String body = mapper.writeValueAsString(fakeState);
-    
+
 //    mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
 //    ObjectWriter ow = mapper.writer().withDefaultPrettyPrinter();
 //    String requestJson=ow.writeValueAsString(anObject);
 
+    fakeMvc.perform(post(target).contentType(APPLICATION_JSON_UTF8)
+        .content(body))
+        .andExpect(status().isOk())
+        .equals(null);
+  }
+  
+  @Test
+  public void assertGetStateHiCitiesYieldsJsonWithFieldsNameAndPopulation() throws Exception
+  {
+ // Assemble
+    String url = "http://localhost:8080";
+    String stateArg = "hi";
+    String target = "/states/" + stateArg + "/cities";
+    String jsonMimeType = "application/json";
+    // Action
+    // Assert
+    this.fakeMvc.perform(get(target)).andDo(print()).andExpect(status().isOk()
+        ).andExpect(content().contentTypeCompatibleWith(jsonMimeType)
+        ).andExpect(content().string(containsString("name:Waipahu"))
+        ).andExpect(content().string(containsString("population:15313"))
+    );
+  }
+  
+  @Test(expected = NestedServletException.class)
+  public void assertGetStateDcCitiesYieldsStateNotFoundException() throws Exception
+  {
+    // Assemble
+    String url = "http://localhost:8080";
+    String stateArg = "dc";
+    String target = "/states/" + stateArg + "/cities";
+    String jsonMimeType = "application/json";
+    // Action
+    // Assert
+    this.fakeMvc.perform(get(target)).andDo(print()).andExpect(status().isOk()
+        ).andExpect(content().contentTypeCompatibleWith(jsonMimeType)
+        ).andExpect(content().string(containsString("name:,population"))
+    );
+  }
+  
+  @Test
+  public void assertPostStateOhCitiesValidIsOkReturnsNothing() throws Exception
+  {
+    // Assemble
+    String stateToAddCitiesTo = "oh";
+    String target = "/post/state/" + stateToAddCitiesTo + "/city/";
+    City newCity = new City("Dreams", 123456L, null);
+    ObjectMapper mapper = new ObjectMapper();
+    String body = null;
+    // Action
+    try {
+      body = mapper.writeValueAsString(newCity);
+    } catch (JsonProcessingException e) {
+      e.printStackTrace();
+    }
+    // Assert
     fakeMvc.perform(post(target).contentType(APPLICATION_JSON_UTF8)
         .content(body))
         .andExpect(status().isOk())

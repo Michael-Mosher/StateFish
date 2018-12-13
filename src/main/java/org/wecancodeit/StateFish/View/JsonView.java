@@ -17,7 +17,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.wecancodeit.StateFish.Model.City;
+import org.wecancodeit.StateFish.Model.CityRepository;
 import org.wecancodeit.StateFish.Model.State;
+import org.wecancodeit.StateFish.Model.StateNotFoundException;
 import org.wecancodeit.StateFish.Model.StateRepository;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -27,6 +30,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class JsonView {
   @Resource
   private StateRepository stateRepo;
+  @Resource
+  private CityRepository citiesRepo;
   
   @RequestMapping(value="/states", method=RequestMethod.GET, produces="application/json")
   public ResponseEntity<String> getStates(Model model)
@@ -43,14 +48,8 @@ public class JsonView {
     }
     answer += "]";
     return new ResponseEntity<String>(answer, headers, HttpStatus.OK);
-//    return new ResponseEntity<String>("[{\"abbreviation\":\"OH\",\"name\":\"Ohio\"," + 
-//        "\"motto\":\"Birthplace of Aviation\",\"fish\":null,\"citiesUrl\":\"/states/oh/cities\"},{" + 
-//        "\"abbreviation\": \"HI\",\"name\":\"Hawaii\",\"motto\":\"The Islands of Aloha\"," + 
-//        "\"fish\": {\"name\":\"Humuhumunukunukuāpuaʻa\"," + 
-//        "\"binomialNomenclature\":\"Rhinecanthus rectangulus\",\"imgUrl\":" + 
-//        "\"https://upload.wikimedia.org/wikipedia/commons/5/52/Reef_Triggerfish_1.JPG\"" + 
-//        "},\"citiesUrl\":\"/states/hi/cities\"}]",headers, HttpStatus.OK);
   }
+  
   @RequestMapping(value="/states/{state}", method=RequestMethod.GET, produces="application/json")
   public ResponseEntity<String> getState(@PathVariable(value="state")String stateAbbreviation, Model model)
   {
@@ -82,6 +81,54 @@ public class JsonView {
       Optional<State> checkByName = stateRepo.findByName(proposedState.getName());
       if(!checkByAbbreviation.isPresent() && !checkByName.isPresent()){
         stateRepo.save(proposedState);
+      }
+    }
+  }
+  
+  @RequestMapping(value="/states/{stateAbbreviation}/cities", method=RequestMethod.GET, produces="application/json")
+  public ResponseEntity<String> getCities(@PathVariable(value="stateAbbreviation") String stateAbbreviation, Model model) throws StateNotFoundException
+  {
+    String answer = "[{}]";
+    final HttpHeaders headers = new HttpHeaders();
+    Optional<State> queriedState = stateRepo.findByAbbreviation(stateAbbreviation.toUpperCase());
+    if(queriedState.isPresent()){
+      Collection<City> cities = citiesRepo.findByEnclosingStateId(queriedState.get().getId());
+      answer = "[";
+      boolean firstCity = true;
+      for (City city : cities) {
+        if(firstCity){
+          answer += city.toJson();
+          firstCity = false;
+        } else {
+          answer += "," + city.toJson();
+        }
+      }
+      answer += "]";
+    } else {
+      throw new StateNotFoundException();
+    }
+    return new ResponseEntity<String>(answer, headers, HttpStatus.OK);
+  }
+  
+  @RequestMapping(value="/post/state/{stateAbbreviation}/city", method=RequestMethod.POST)
+  public void postCity(@PathVariable(value="stateAbbreviation")String stateAbbreviation, @RequestBody HttpEntity<String> postBody)
+  {
+    Optional<State> stateToAddTo = stateRepo.findByAbbreviation(stateAbbreviation);
+    if(postBody.hasBody() && stateToAddTo.isPresent()){
+      ObjectMapper mapper = new ObjectMapper();
+      City proposedCity = null;
+      try {
+        proposedCity = mapper.readValue(postBody.getBody(), City.class);
+      } catch (JsonParseException e) {
+        e.printStackTrace();
+      } catch (JsonMappingException e) {
+        e.printStackTrace();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      Collection<City> incumbentCities = stateToAddTo.get().getCities();
+      if(!incumbentCities.contains(proposedCity)){
+        citiesRepo.save(new City(proposedCity.getName(), proposedCity.getPopulation(), stateToAddTo.get()));
       }
     }
   }

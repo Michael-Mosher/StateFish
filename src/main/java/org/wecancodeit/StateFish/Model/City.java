@@ -84,4 +84,9 @@ public class City {
       return false;
     return true;
   }
+
+  public String toJson()
+  {
+    return "{name:" + this.getName() + ",population:" + this.getPopulation() + "}";
+  }
 }

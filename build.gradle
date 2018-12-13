@@ -33,4 +33,5 @@ dependencies {
 	implementation('org.springframework.boot:spring-boot-starter-web-services')
 	runtimeOnly('org.springframework.boot:spring-boot-devtools')
 	testImplementation('org.springframework.boot:spring-boot-starter-test')
+	testCompile group: 'javax.inject', name:'javax.inject', version: '1'
 }
