@@ -1,10 +1,12 @@
 package org.wecancodeit.StateFish.View;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
 
 import javax.annotation.Resource;
 
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,10 +14,15 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.wecancodeit.StateFish.Model.State;
 import org.wecancodeit.StateFish.Model.StateRepository;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 @Controller
 public class JsonView {
   @Resource
@@ -56,11 +63,26 @@ public class JsonView {
     return new ResponseEntity<String>( "[{name:"+null+",abbreviation:"+null+",motto:"+null+",citiesUrl:"+null+",fish:"+null+"}]",headers, HttpStatus.OK);
   }
   
-  @RequestMapping(value="/post/state/", method=RequestMethod.POST)
-  public void postState(@PostMapping(value="postBody") String postBody)
+  @RequestMapping(value="/post/state/", method=RequestMethod.POST/*, consumes=APPLICATION_JSON_UTF8*/)
+  public void postState(@RequestBody HttpEntity<String> postBody)
   {
-    
-    Optional<State> checkByAbbreviation = stateRepo.findByAbbreviation(stateAbbreviation);
-    Optional<State> checkByName = stateRepo.findByName(stateName);
+    if(postBody.hasBody()){
+      ObjectMapper mapper = new ObjectMapper();
+      State proposedState = null;
+      try {
+        proposedState = mapper.readValue(postBody.getBody(), State.class);
+      } catch (JsonParseException e) {
+        e.printStackTrace();
+      } catch (JsonMappingException e) {
+        e.printStackTrace();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      Optional<State> checkByAbbreviation = stateRepo.findByAbbreviation(proposedState.getAbbreviation());
+      Optional<State> checkByName = stateRepo.findByName(proposedState.getName());
+      if(!checkByAbbreviation.isPresent() && !checkByName.isPresent()){
+        stateRepo.save(proposedState);
+      }
+    }
   }
 }

@@ -100,9 +100,6 @@ public class JsonTest {
     State fakeState = new State("Dischord", "DC", "Arrgh", new Fish("Slippery", "Icthocalamatus", "https://no-such.org/"));
     ObjectMapper mapper = new ObjectMapper();
     String body = mapper.writeValueAsString(fakeState);
-    this.fakeMvc.perform(get(target)).andDo(print()).andExpect(status().isOk()
-        ).equals(null);
-    
     
 //    mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
 //    ObjectWriter ow = mapper.writer().withDefaultPrettyPrinter();
