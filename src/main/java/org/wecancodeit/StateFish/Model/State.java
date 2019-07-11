@@ -8,13 +8,14 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
+
 @Entity
 public class State {
   @Id
   @GeneratedValue
   private Long id;
   @Column(name="stateName")
-  private String name;
+  private String name = "";
   private String abbreviation;
   private String motto;
   @Embedded
@@ -137,8 +138,12 @@ public class State {
   private Fish fish;
   @OneToMany(mappedBy="enclosingState")
      */
-    String f;
-    return "{name:" + this.getName() + ",abbreviation:" + this.getAbbreviation() + ",motto:"
-        + this.getMotto() + ",citiesUrl:"+this.getCitiesUrl()+  ",fish:" + (f = (this.fish!=null) ? fish.getJson() : null) + "}";
+    System.out.println("State.getJson is this null: " + (this instanceof State));
+    String f, n;
+    //f = IsNull(this)
+    return "{name:" + (n = (this.getName()!=null) ? this.getName() : "") + ",abbreviation:"
+        + this.getAbbreviation() + ",motto:"
+        + this.getMotto() + ",citiesUrl:"+this.getCitiesUrl()
+        +  ",fish:" + (f = (this.fish!=null) ? fish.getJson() : null) + "}";
   }
 }
